@@ -1,0 +1,461 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define V 50
+class node       //this class contains the details about the train
+{
+public:
+    int trainno;
+    int cost;
+    int sTime;
+    int eTime;
+    node(int tno, int s1, int e1, int c)
+    {
+        trainno = tno;
+        sTime = s1, eTime = e1;
+        cost = c;
+    }
+};
+class Travel          //it contains all the member variables and functions containing information about the routes
+{
+private:
+    int source, destination;
+    int minCost, minTime;
+    vector<int> minCosttrain;
+    vector<int> traintartTime;
+    vector<int> trainendTime;
+    vector<vector<int>> allpaths;
+    vector<int> minTimetrain;
+    vector<int> minCostbestPath;
+    vector<int> minTimebestPath;
+    map<int, string> cities;
+    vector<int> adj[V];
+    int visited[1000] = {0};
+    vector<node> train[V][V];
+
+public:
+    void mapCities();
+    void addEdge(int u, int v);
+    void sendData();
+    void findAllPaths(int u, int v, vector<int> path);
+    void addtrain(int tno, int u, int v, int s, int e, int c);
+    void initializeStartData(string s, string d);
+    void printMinCost();
+    void printMinTime();
+    void UserChoice(int startTime);
+    void MinCostUtil(int startTime, int sIndex, int dIndex, int pathIndex, int cost, int n, vector<int> trainId,vector<int> trainst,vector<int> trainet);
+    void MinTimeUtil(int startTime, int sIndex, int dIndex, int pathIndex, int cost, int n, vector<int> trainId,vector<int> trainst,vector<int> trainet);
+};
+void Travel::mapCities()   //map cities to a particular vertex
+{
+    cities[0] = "BANGALORE";
+    cities[1] = "HYDERABAD";
+    cities[2] = "GHAZIABAD";
+    cities[3] = "GURUGRAM";
+    cities[4] = "HARYANA";
+    cities[5] = "DELHI";
+    cities[6] = "MATHURA";
+    cities[7] = "MORADABAD";
+    cities[8] = "LUCKNOW";
+    cities[9] = "ROORKEE";
+    cities[10] = "JAIPUR";
+    cities[11] = "MEERUT";
+    cities[12] = "CHANDIGARH";
+    cities[13] = "NOIDA";
+    cities[14] = "DEHRADUN";
+    cities[15] = "PRAYAGRAJ";
+}
+void Travel::addEdge(int u, int v)  // function for adding a new edge
+{
+    adj[u].push_back(v);
+    adj[v].push_back(u);
+}
+void Travel::sendData()     //function for taking input from the user
+{
+    cout<<"---------------Welcome---------------"<<endl;
+    cout << "Enter the city from which u want to take the train:" << endl;
+    string u, v;
+    cin >> u;
+    cout << "Enter the destination city:" << endl;
+    cin >> v;
+    initializeStartData(u, v);
+}
+void Travel::findAllPaths(int u, int v, vector<int> path)  //function for finding all possible paths
+{
+    visited[u] = 1;
+    if (u == v)
+    {
+        allpaths.push_back(path);
+    }
+    else
+    {
+        for (int i = 0; i < adj[u].size(); i++)
+        {
+            int y = adj[u][i];
+            if (visited[y] == 0)
+            {
+                visited[y] = 1;
+
+                path.push_back(y);
+                findAllPaths(y, v, path);
+                path.pop_back();
+            }
+        }
+    }
+    visited[u] = 0;
+}
+void Travel::addtrain(int tno, int u, int v, int s, int e, int c) // function for adding a new train
+{
+
+    train[u][v].push_back(node(tno, s, e, c));
+    train[v][u].push_back(node(tno, s, e, c));
+}
+void Travel::initializeStartData(string s, string d)
+{
+    transform(s.begin(), s.end(), s.begin(), ::toupper); //converts to UpperCase
+    transform(d.begin(), d.end(), d.begin(), ::toupper);
+    source=destination=-1;
+    for (auto it : cities)  //finds the vertex number for the cities
+    {
+        if (it.second == s)
+        {
+            source = it.first;
+            break;
+        }
+    }
+    for (auto it : cities)
+    {
+        if (it.second == d)
+        {
+            destination = it.first;
+            break;
+        }
+    }
+    if(source==-1 || destination==-1)
+    {
+        cout<<"Sorry we have no trains running between these cities:"<<endl;
+        return;
+    }
+    cout<<"Enter the time when you want to leave for your destination in 24 hour format:"<<endl;
+    int startTime;
+    cin>>startTime;
+    if(startTime>24 || startTime<1)
+    {
+        cout<<"Please enter the time in 24 hour format!!"<<endl<<endl;
+        return;
+    }
+    vector<int> path;
+    path.push_back(source);
+    allpaths.clear();
+    findAllPaths(source, destination, path);
+    if(allpaths.size()==0)
+    {
+        cout<<"No path possible to destination:"<<endl;
+        return;
+    }
+    /*for (auto it : allpaths)
+    {
+
+        for (auto it2 : it)
+            cout << "->" << cities[it2];
+        cout << endl;
+    }*/
+    UserChoice(startTime);
+}
+void Travel::UserChoice(int startTime)  //asks the users about their choice
+{
+    minCost = INT_MAX;
+    minTime = INT_MAX;
+    vector<int> trainId;
+    vector<int> trainst;
+    vector<int> trainet;
+    cout << "You have two options to get to your destinations"<<endl<<endl;
+    cout << "1) Do u want take the path that takes you to the destination in minimum cost " << endl;
+    cout << "2) Do u want take the path that takes you to the destination in minimum time " << endl;
+    cout << "Which option would u like?" << endl<<endl;
+    int ch;
+    cin >> ch;
+    if (ch == 1)
+    {
+        for (int i = 0; i < allpaths.size(); i++) // traverse the path list
+            MinCostUtil(startTime, 0, 1, i, 0, allpaths[i].size(), trainId,trainst,trainet);
+        printMinCost();
+    }
+    else
+    {
+        for (int i = 0; i < allpaths.size(); i++) // traverse the path list
+            MinTimeUtil(startTime, 0, 1, i, 0, allpaths[i].size(), trainId,trainst,trainet);
+        printMinTime();
+    }
+    int n;
+    cout<<endl<<"Do you want to again look for a train route:1-continue,2-exit"<<endl;
+    cin>>n;
+    if(n==1)
+        sendData();
+    else
+        return;
+
+}
+void Travel::MinCostUtil(int startTime, int sIndex, int dIndex, int pathIndex, int cost, int n,vector<int> trainId,vector<int> trainst,vector<int> trainet)
+{
+    if (dIndex == n)                          //function for finding path with the minimum cost
+    {
+        if (minCost>=cost)
+        {
+            if(minCost==cost)
+            {
+                if(minTime>startTime)
+                {
+                    minTime = startTime;
+                    minCosttrain=trainId;
+                    minCostbestPath=(allpaths[pathIndex]);
+                    traintartTime=trainst;
+                    trainendTime=trainet;
+                }
+            }
+            else{
+            minCost = cost;
+            minTime = startTime;
+            minCosttrain=trainId;
+            minCostbestPath=(allpaths[pathIndex]);
+            traintartTime=trainst;
+            trainendTime=trainet;
+            }
+        }
+        return;
+    }
+    else
+    {
+        for (auto trainavail : train[allpaths[pathIndex][sIndex]][allpaths[pathIndex][dIndex]])
+        {
+            if (trainavail.sTime >= startTime)
+            {
+                trainId.push_back(trainavail.trainno);
+                trainst.push_back(trainavail.sTime);
+                trainet.push_back(trainavail.eTime);
+                MinCostUtil(trainavail.eTime, sIndex + 1, dIndex + 1, pathIndex, cost + trainavail.cost, n, trainId,trainst,trainet);
+                trainId.pop_back();
+                trainst.pop_back();
+                trainet.pop_back();
+            }
+        }
+    }
+}
+
+void Travel::MinTimeUtil(int startTime, int sIndex, int dIndex, int pathIndex, int cost, int n,vector<int> trainId,vector<int> trainst,vector<int> trainet)
+{
+    if (dIndex == n)                 //function for finding path with the minimum time
+    {
+        if (minTime >= startTime)
+        {
+            if(minTime==startTime)
+            {
+                if(minCost>cost)
+                {
+                    minCost=cost;
+                    minTimetrain=trainId;
+                    minTimebestPath=(allpaths[pathIndex]);
+                    traintartTime=trainst;
+                    trainendTime=trainet;
+                }
+            }
+            else{
+            minTime = startTime;
+            minCost = cost;
+            minTimetrain=trainId;
+            minTimebestPath=(allpaths[pathIndex]);
+            traintartTime=trainst;
+            trainendTime=trainet;
+            }
+        }
+        return;
+    }
+    else
+    {
+        for (auto trainavail : train[allpaths[pathIndex][sIndex]][allpaths[pathIndex][dIndex]])
+        {
+            if (trainavail.sTime >= startTime)
+            {
+                trainId.push_back(trainavail.trainno);
+                trainst.push_back(trainavail.sTime);
+                trainet.push_back(trainavail.eTime);
+                MinTimeUtil(trainavail.eTime, sIndex + 1, dIndex + 1, pathIndex, cost + trainavail.cost, n, trainId,trainst,trainet);
+                trainId.pop_back();
+                trainst.pop_back();
+                trainet.pop_back();
+            }
+        }
+    }
+}
+
+void Travel::printMinTime()
+{
+    if (minTimetrain.size()==0)
+    {
+        cout << "No combination of trains exist that can take to you to your destination" << endl;
+        return;
+    }
+    cout << "Following is the best path available that will take you to your destination in Minimum time:" << endl;
+    string s="",s2="";
+    for (auto it : minTimebestPath)
+    {
+        s=cities[it];
+        cout << "->" <<s ;
+    }
+    cout << endl; int i = 0;
+    int j = 1;
+     cout << "Following trains you should take to reach to your destination" << endl<<endl;
+     int k=0;
+    for (auto it : minTimetrain)
+    {
+        s=cities[minTimebestPath[i]];
+        s2=cities[minTimebestPath[j]];
+        cout<<endl;
+        cout<<"Take trainNumber-" << it << " from " << s << " which is scheduled at "<<traintartTime[k]<<"hrs and reach "<< s2<<" at "<<trainendTime[k++]<<"hrs"<<endl;
+        i++;
+        j++;
+        cout<<endl;
+    }
+    cout<<endl<<endl;
+    int l=minTimebestPath.size();
+    cout << "You will reach " <<cities[minTimebestPath[l-1]]<<" at "<<minTime<<"hrs"<<endl;
+    cout << "Your total train fare = " << minCost<<endl;
+}
+
+void Travel::printMinCost()
+{
+    if (minCosttrain.size()==0)
+    {
+        cout << "No combination of trains exist that can take to you to your destination" << endl;
+        return;
+    }
+    cout << "Following is the best path available that will take you to your destination in Minimum Cost:" << endl;
+    string s="",s2="";
+    for (auto it : minCostbestPath)
+    {
+        s=cities[it];
+        cout << "->" << (s);
+    }
+    cout << endl;
+    cout << "Following trains u should take to reach to your destination" << endl<<endl;
+    int i = 0;
+    int j = 1;
+    int k=0;
+    for (auto it : minCosttrain)
+    {
+        s=cities[minCostbestPath[i]];
+        s2=cities[minCostbestPath[j]];
+        cout<<endl;
+         cout <<"Take trainNumber-" << it << " from " << s << " which is scheduled at "<<traintartTime[k]<<"hrs and reach "<< s2<<" at "<<trainendTime[k++]<<"hrs";
+        i++;
+        j++;
+        cout<<endl;
+    }
+    cout << endl<<endl;
+    int l=minCostbestPath.size();
+    cout << "You will reach " <<cities[minCostbestPath[l-1]]<<" at "<<minTime<<"hrs"<<endl;
+    cout << "Your total train fare = " << minCost<<endl;
+}
+int main()
+{
+    Travel obj;
+    obj.mapCities();
+    obj.addEdge(0, 1);
+    obj.addEdge(0, 2);
+    obj.addEdge(0, 3);
+    obj.addEdge(0, 4);
+    obj.addEdge(1, 2);
+    obj.addEdge(1, 6);
+    obj.addEdge(1, 5);
+    obj.addEdge(2, 7);
+    obj.addEdge(3, 4);
+    obj.addEdge(3, 10);
+    obj.addEdge(5, 7);
+    obj.addEdge(5, 8);
+    obj.addEdge(5, 9);
+    obj.addEdge(6, 9);
+    obj.addEdge(7, 8);
+    obj.addEdge(9, 10);
+    obj.addEdge(2, 11);
+    obj.addEdge(11, 12);
+    obj.addEdge(4, 13);
+    obj.addEdge(12, 13);
+    obj.addEdge(11, 13);
+    obj.addEdge(11, 14);
+    obj.addEdge(12, 14);
+    obj.addEdge(5, 15);
+    obj.addEdge(8, 15);
+    obj.addtrain(101, 0, 1, 6, 7, 50);
+    obj.addtrain(102, 0, 1, 12, 13, 60);
+    obj.addtrain(103, 0, 1, 17, 18, 80);
+    obj.addtrain(104, 0, 2, 9, 10, 40);
+    obj.addtrain(105, 0, 2, 14, 15, 60);
+    obj.addtrain(106, 0, 3, 5, 6, 30);
+    obj.addtrain(107, 0, 3, 15, 16, 50);
+    obj.addtrain(108, 0, 4, 10, 12, 40);
+    obj.addtrain(109, 1, 2, 8, 9, 20);
+    obj.addtrain(110, 1, 2, 12, 13, 30);
+    obj.addtrain(111, 1, 2, 16, 17, 40);
+    obj.addtrain(112, 1, 5, 7, 10, 80);
+    obj.addtrain(113, 1, 5, 9, 12, 100);
+    obj.addtrain(114, 1, 6, 10, 12, 60);
+    obj.addtrain(115, 1, 6, 18, 20, 20);
+    obj.addtrain(116, 2, 7, 7, 10, 70);
+    obj.addtrain(117, 2, 7, 14, 17, 90);
+    obj.addtrain(118, 2, 7, 11, 14, 60);
+    obj.addtrain(119, 7, 8, 12, 16, 150);
+    obj.addtrain(120, 5, 8, 8, 10, 80);
+    obj.addtrain(121, 5, 8, 15, 17, 70);
+    obj.addtrain(122, 5, 8, 17, 19, 90);
+    obj.addtrain(123, 6, 9, 12, 13, 50);
+    obj.addtrain(124, 6, 9, 15, 16, 40);
+    obj.addtrain(125, 5, 9, 6, 9, 20);
+    obj.addtrain(126, 5, 9, 13, 14, 40);
+    obj.addtrain(127, 5, 9, 17, 20, 80);
+    obj.addtrain(128, 3, 10, 10, 13, 70);
+    obj.addtrain(129, 3, 10, 15, 18, 60);
+    obj.addtrain(130, 3, 4, 12, 14, 40);
+    obj.addtrain(131, 9, 10, 10, 13, 90);
+    obj.addtrain(132, 3, 10, 5, 8, 70);
+    obj.addtrain(133, 3, 0, 9, 10, 40);
+    obj.addtrain(134, 0, 2, 11, 12, 50);
+    obj.addtrain(135, 4, 0, 7, 8, 30);
+    obj.addtrain(136, 7, 8, 16, 20, 50);
+    obj.addtrain(137, 1, 5, 13, 17, 60);
+    obj.addtrain(138, 8, 5, 6, 9, 50);
+    obj.addtrain(139, 1, 6, 13, 15, 40);
+    obj.addtrain(140, 9, 10, 12, 15, 60);
+    obj.addtrain(141, 2, 11, 9, 11, 40);
+    obj.addtrain(142, 2, 11, 12, 14, 50);
+    obj.addtrain(143, 2, 11, 16, 18, 60);
+    obj.addtrain(144, 11, 12, 6, 10, 50);
+    obj.addtrain(145, 11, 12, 14, 16, 70);
+    obj.addtrain(146, 4, 13, 8, 11, 50);
+    obj.addtrain(147, 4, 13, 11, 14, 50);
+    obj.addtrain(148, 4, 13, 13, 16, 60);
+    obj.addtrain(149, 12, 13, 6, 8, 50);
+    obj.addtrain(150, 12, 13, 12, 14, 30);
+    obj.addtrain(151, 11, 13, 13, 16, 50);
+    obj.addtrain(152, 11, 14, 9, 12, 30);
+    obj.addtrain(153, 11, 14, 11, 14, 50);
+    obj.addtrain(154, 11, 14, 14, 17, 40);
+    obj.addtrain(155, 12, 14, 6, 10, 50);
+    obj.addtrain(156, 12, 14, 11, 15, 60);
+    obj.addtrain(157, 8, 7, 6, 10, 40);
+    obj.addtrain(158, 11, 12, 18, 21, 60);
+    obj.addtrain(159, 2, 11, 13, 14, 40);
+    obj.addtrain(160, 8, 15, 7, 10, 40);
+    obj.addtrain(161, 8, 15, 14, 17, 70);
+    obj.addtrain(162, 8, 15, 19, 22, 60);
+    obj.addtrain(163, 1, 5, 10, 13, 60);
+    obj.addtrain(164, 5, 15, 6, 9, 30);
+    obj.addtrain(165, 5, 15, 13, 16, 50);
+    obj.addtrain(166, 5, 15, 17, 20, 40);
+    obj.addtrain(167, 11, 2, 10, 11, 50);
+    obj.addtrain(168, 3, 0, 8, 9, 40);
+    obj.addtrain(169, 0, 1, 6, 8, 10);
+    obj.addtrain(170, 10, 3, 6, 8, 80);
+    obj.addtrain(171, 3, 0, 8, 9, 50);
+    obj.addtrain(172, 0, 1, 9, 10, 30);
+    obj.sendData();
+    cout << endl;
+}
